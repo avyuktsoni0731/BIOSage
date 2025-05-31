@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Info } from "lucide-react";
 import HardwareMonitor from "@/components/hardware-monitor/page";
+import AdvancedFeatures from "@/components/advanced-features/page";
 
 interface SystemInfo {
   biosVersion: string;
@@ -25,20 +26,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-import { Button } from "@/components/ui/button";
-import {
-  CircleAlert,
-  Cpu,
-  MemoryStickIcon as Memory,
-  HardDrive,
-  Thermometer,
-  Zap,
-  Battery,
-  Wifi,
-  NetworkIcon as Ethernet,
-  Keyboard,
-} from "lucide-react";
 
 // Performance profiles
 const performanceProfiles = {
@@ -194,8 +181,8 @@ export default function BiosSimulator() {
           if (e.shiftKey) {
             setActiveTab((prev) =>
               prev === "dashboard"
-                ? "diagnostics"
-                : prev === "diagnostics"
+                ? "advanced"
+                : prev === "advanced"
                 ? "hardware"
                 : "dashboard"
             );
@@ -204,7 +191,7 @@ export default function BiosSimulator() {
               prev === "dashboard"
                 ? "hardware"
                 : prev === "hardware"
-                ? "diagnostics"
+                ? "advanced"
                 : "dashboard"
             );
           }
@@ -346,10 +333,10 @@ export default function BiosSimulator() {
             Hardware Monitor
           </TabsTrigger>
           <TabsTrigger
-            value="diagnostics"
+            value="advanced"
             className="data-[state=active]:bg-gray-800 data-[state=active]:text-white"
           >
-            Diagnostics
+            Advanced Features
           </TabsTrigger>
         </TabsList>
 
@@ -524,6 +511,9 @@ export default function BiosSimulator() {
 
         {/* Hardware Monitor Tab */}
         <HardwareMonitor />
+
+        {/* Advanced Features Tab */}
+        <AdvancedFeatures />
       </Tabs>
 
       {/* Footer */}

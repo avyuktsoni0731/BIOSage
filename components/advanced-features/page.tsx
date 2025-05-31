@@ -182,7 +182,7 @@ export default function AdvancedFeatures() {
         </div>
 
         {/* System Logs */}
-        <Card className="border-gray-800 bg-gray-900/50 p-4">
+        {/* <Card className="border-gray-800 bg-gray-900/50 p-4">
           <h2 className="text-lg font-medium mb-3">System Event Log</h2>
           <div className="bg-black/50 p-3 rounded text-sm font-mono h-40 overflow-y-auto">
             <p className="text-green-400">
@@ -210,7 +210,7 @@ export default function AdvancedFeatures() {
               [{formatUptime(uptime - 45)}] System boot completed successfully
             </p>
           </div>
-        </Card>
+        </Card> */}
       </TabsContent>
     </>
   );
