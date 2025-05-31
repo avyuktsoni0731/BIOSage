@@ -49,7 +49,13 @@ export default function HardwareMonitor() {
                   <XAxis dataKey="time" tick={false} />
                   <YAxis domain={[0, 100]} />
                   <Tooltip
-                    content={({ active, payload }) => {
+                    content={({
+                      active,
+                      payload,
+                    }: {
+                      active?: boolean;
+                      payload?: Array<{ value: number }>;
+                    }) => {
                       if (active && payload && payload.length) {
                         return (
                           <div className="bg-gray-800 border border-gray-700 p-2 text-xs">
@@ -87,7 +93,13 @@ export default function HardwareMonitor() {
                   <XAxis dataKey="time" tick={false} />
                   <YAxis domain={[0, 100]} />
                   <Tooltip
-                    content={({ active, payload }) => {
+                    content={({
+                      active,
+                      payload,
+                    }: {
+                      active?: boolean;
+                      payload?: Array<{ value: number }>;
+                    }) => {
                       if (active && payload && payload.length) {
                         return (
                           <div className="bg-gray-800 border border-gray-700 p-2 text-xs">
@@ -127,7 +139,13 @@ export default function HardwareMonitor() {
                   <XAxis dataKey="time" tick={false} />
                   <YAxis domain={[20, 100]} />
                   <Tooltip
-                    content={({ active, payload }) => {
+                    content={({
+                      active,
+                      payload,
+                    }: {
+                      active?: boolean;
+                      payload?: Array<{ value: number }>;
+                    }) => {
                       if (active && payload && payload.length) {
                         return (
                           <div className="bg-gray-800 border border-gray-700 p-2 text-xs">
