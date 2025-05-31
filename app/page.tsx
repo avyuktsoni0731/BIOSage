@@ -26,6 +26,64 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+import { Button } from "@/components/ui/button";
+import {
+  CircleAlert,
+  Cpu,
+  MemoryStickIcon as Memory,
+  HardDrive,
+  Thermometer,
+  Zap,
+  Battery,
+  Wifi,
+  NetworkIcon as Ethernet,
+  Keyboard,
+} from "lucide-react";
+
+// Performance profiles
+const performanceProfiles = {
+  quiet: {
+    name: "Quiet",
+    theme: "green",
+    fanSpeed: 25,
+    cpuMultiplier: 0.6,
+    colors: {
+      primary: "text-green-400",
+      bg: "bg-green-950/20",
+      border: "border-green-800",
+    },
+  },
+  balanced: {
+    name: "Balanced",
+    theme: "blue",
+    fanSpeed: 50,
+    cpuMultiplier: 1.0,
+    colors: {
+      primary: "text-blue-400",
+      bg: "bg-blue-950/20",
+      border: "border-blue-800",
+    },
+  },
+  turbo: {
+    name: "Turbo",
+    theme: "red",
+    fanSpeed: 85,
+    cpuMultiplier: 1.4,
+    colors: {
+      primary: "text-red-400",
+      bg: "bg-red-950/20",
+      border: "border-red-800",
+    },
+  },
+};
+
+const generateTimeData = (points: number, multiplier = 1) => {
+  return Array.from({ length: points }, (_, i) => ({
+    time: i,
+    value: Math.floor((Math.random() * 40 + 20) * multiplier),
+  }));
+};
+
 export default function BiosSimulator() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [bootProgress, setBootProgress] = useState(0);
@@ -34,6 +92,16 @@ export default function BiosSimulator() {
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [currentProfile, setCurrentProfile] =
+    useState<keyof typeof performanceProfiles>("balanced");
+  const [powerMode, setPowerMode] = useState("balanced");
+  const [batteryLevel, setBatteryLevel] = useState(85);
+  const [isCharging, setIsCharging] = useState(false);
+  const [uptime, setUptime] = useState(0);
+  const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [mouseButtons, setMouseButtons] = useState<Set<number>>(new Set());
+  const profile = performanceProfiles[currentProfile];
 
   const [info, setInfo] = useState<SystemInfo | null>(null);
   useEffect(() => {
@@ -42,6 +110,51 @@ export default function BiosSimulator() {
       .then((data) => setInfo(data))
       .catch((err) => console.error("Error fetching system info:", err));
   }, []);
+
+  // Generate CPU data based on current profile
+  const [cpuData, setCpuData] = useState(() =>
+    generateTimeData(20, performanceProfiles[currentProfile].cpuMultiplier)
+  );
+  const [ramData] = useState(() => generateTimeData(20));
+  const [tempData] = useState(() => generateTimeData(20));
+
+  // Load saved profile from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("biosProfile");
+    if (saved && saved in performanceProfiles) {
+      setCurrentProfile(saved as keyof typeof performanceProfiles);
+    }
+  }, []);
+
+  // Update CPU data when profile changes
+  useEffect(() => {
+    setCpuData(
+      generateTimeData(20, performanceProfiles[currentProfile].cpuMultiplier)
+    );
+    localStorage.setItem("biosProfile", currentProfile);
+  }, [currentProfile]);
+
+  // Uptime counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUptime((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Battery simulation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBatteryLevel((prev) => {
+        if (isCharging) {
+          return Math.min(100, prev + 0.1);
+        } else {
+          return Math.max(0, prev - 0.05);
+        }
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isCharging]);
 
   // Simulate boot process
   useEffect(() => {
@@ -254,6 +367,15 @@ export default function BiosSimulator() {
                     <InfoRow label="Memory" value={info.memory} />
                     <InfoRow label="Storage" value={info.storage} />
                     <InfoRow label="Boot Mode" value={info.bootMode} />
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Performance Profile</span>
+
+                      <Badge
+                        className={`${profile.colors.bg} ${profile.colors.primary} ${profile.colors.border}`}
+                      >
+                        {profile.name}
+                      </Badge>
+                    </div>
                   </>
                 ) : (
                   <p className="text-gray-400">Loading...</p>
@@ -355,6 +477,47 @@ export default function BiosSimulator() {
               <p className="text-green-400">
                 [00:00:20] Waiting for boot device selection
               </p>
+            </div>
+          </Card>
+
+          <Card className="border-gray-800 bg-gray-900/50 p-4">
+            <h2 className="text-lg font-medium mb-3">Performance Profiles</h2>
+            <div className="grid grid-cols-3 gap-4">
+              {Object.entries(performanceProfiles).map(([key, prof]) => (
+                <Card
+                  key={key}
+                  className={`p-4 cursor-pointer transition-all ${
+                    currentProfile === key
+                      ? `${prof.colors.border} ${prof.colors.bg}`
+                      : "border-gray-700 hover:border-gray-600"
+                  }`}
+                  onClick={() =>
+                    setCurrentProfile(key as keyof typeof performanceProfiles)
+                  }
+                >
+                  <div className="text-center">
+                    <h3
+                      className={`font-medium ${
+                        currentProfile === key
+                          ? prof.colors.primary
+                          : "text-white"
+                      }`}
+                    >
+                      {prof.name}
+                    </h3>
+                    <div className="mt-2 space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Fan Speed:</span>
+                        <span>{prof.fanSpeed}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">CPU Boost:</span>
+                        <span>{Math.round(prof.cpuMultiplier * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           </Card>
         </TabsContent>
