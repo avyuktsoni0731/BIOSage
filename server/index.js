@@ -1,6 +1,7 @@
 import { pipeline } from "@xenova/transformers";
 import express from "express";
 import cors from "cors";
+import si from "systeminformation";
 
 const app = express();
 app.use(cors());
@@ -28,6 +29,15 @@ Do NOT give reference to any tool.
 Begin the answer directly:
 `;
 
+function snapToStandardRAMSize(sizeGB) {
+  const commonSizes = [4, 8, 16, 32, 64, 128];
+  const closest = commonSizes.reduce((prev, curr) =>
+    Math.abs(curr - sizeGB) < Math.abs(prev - sizeGB) ? curr : prev
+  );
+  return `${closest}`;
+}
+
+
 async function initializeModel() {
   if (modelLoading) return;
   modelLoading = true;
@@ -52,6 +62,31 @@ async function initializeModel() {
     modelLoading = false;
   }
 }
+
+app.get('/system-info', async (req, res) => {
+  try {
+    const [bios, cpu, mem, disk, graphics] = await Promise.all([
+      si.bios(),
+      si.cpu(),
+      si.mem(),
+      si.diskLayout(),
+      si.graphics(),
+    ]);
+
+    res.json({
+      biosVersion: `${bios.version} (${bios.releaseDate})`,
+      cpu: `${cpu.manufacturer} ${cpu.brand}`,
+      memory: `${snapToStandardRAMSize(mem.total / (1024 ** 3))}GB`,
+      storage: `${(disk[0].size / 1e12).toFixed(1)}TB ${disk[0].type}`,
+      bootMode: 'UEFI',
+      graphics: `${graphics.controllers[0].model}`,
+
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch system info' });
+  }
+});
 
 app.get("/api/health", (req, res) => {
   if (modelError) {
@@ -127,6 +162,7 @@ initializeModel()
   .then(() => {
     app.listen(port, () => {
       console.log(`🚀 Server running at http://localhost:${port}`);
+      console.log("💻 System information endpoint: GET /system-info");
       console.log("🩺 Health check: GET /api/health");
       console.log("✍ Generate endpoint: POST /api/generate");
     });
