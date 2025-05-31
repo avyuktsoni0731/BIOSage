@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Info } from "lucide-react";
+import { AlertCircle, Info, Loader2 } from "lucide-react";
 import HardwareMonitor from "@/components/hardware-monitor/page";
 import AdvancedFeatures from "@/components/advanced-features/page";
 
@@ -16,6 +16,14 @@ interface SystemInfo {
   storage: string;
   bootMode: string;
   graphics: string;
+}
+
+interface DiagnosticResponse {
+  generated_text: string;
+  usage?: {
+    prompt_tokens: number | string;
+    generated_tokens: number | string;
+  };
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -88,6 +96,10 @@ export default function BiosSimulator() {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [mouseButtons, setMouseButtons] = useState<Set<number>>(new Set());
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [llmStatus, setLlmStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
   const profile = performanceProfiles[currentProfile];
 
   const [info, setInfo] = useState<SystemInfo | null>(null);
@@ -96,14 +108,33 @@ export default function BiosSimulator() {
       .then((res) => res.json())
       .then((data) => setInfo(data))
       .catch((err) => console.error("Error fetching system info:", err));
+
+    // Check LLM status
+    checkLlmStatus();
   }, []);
+
+  // Check LLM service status
+  const checkLlmStatus = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/health");
+      const data = await response.json();
+      if (data.status === "ready") {
+        setLlmStatus("ready");
+      } else if (data.status === "loading") {
+        setLlmStatus("loading");
+      } else {
+        setLlmStatus("error");
+      }
+    } catch (err) {
+      setLlmStatus("error");
+      console.error("Error checking LLM status:", err);
+    }
+  };
 
   // Generate CPU data based on current profile
   const [cpuData, setCpuData] = useState(() =>
     generateTimeData(20, performanceProfiles[currentProfile].cpuMultiplier)
   );
-  const [ramData] = useState(() => generateTimeData(20));
-  const [tempData] = useState(() => generateTimeData(20));
 
   // Load saved profile from localStorage
   useEffect(() => {
@@ -226,12 +257,37 @@ export default function BiosSimulator() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [errorMessage, diagnosticResult]);
 
-  const analyzeError = () => {
-    setDiagnosticResult(
-      "DIAGNOSTIC RESULT: Memory module in DIMM_A2 has incorrect timing parameters. " +
-        "The module is reporting CL16-18-18-36 but system expects CL16-18-18-38. " +
-        "Recommended action: Update BIOS to latest version or manually adjust memory timings in BIOS setup."
-    );
+  const analyzeError = async () => {
+    if (!errorMessage) return;
+
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch("http://localhost:3001/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: errorMessage,
+          maxTokens: 200,
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze error");
+      }
+
+      const data: DiagnosticResponse = await response.json();
+      setDiagnosticResult(data.generated_text);
+    } catch (error) {
+      console.error("Error analysis failed:", error);
+      setDiagnosticResult(
+        "Failed to analyze error. Please check the LLM service status."
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const resetSystem = () => {
@@ -248,9 +304,43 @@ export default function BiosSimulator() {
       tabIndex={0}
     >
       {/* Header */}
+      {/* <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-xl font-bold text-white">BIOSage v2.0</h1>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-gray-400">
+            BOOT STAGE: <span className="text-white">{bootStage}</span>
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <Progress value={bootProgress} className="w-40 h-2" />
+            <span className="text-xs">{bootProgress}%</span>
+          </div>
+        </div>
+      </div> */}
+
       <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-xl font-bold text-white">BIOSage v2.0</h1>
+          <div className="flex items-center gap-2 mt-1 text-xs">
+            <span className="text-gray-400">LLM Service:</span>
+            <Badge
+              variant="outline"
+              className={
+                llmStatus === "ready"
+                  ? "bg-green-950/30 text-green-400 border-green-800"
+                  : llmStatus === "loading"
+                  ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
+                  : "bg-red-950/30 text-red-400 border-red-800"
+              }
+            >
+              {llmStatus === "ready"
+                ? "Ready"
+                : llmStatus === "loading"
+                ? "Loading"
+                : "Unavailable"}
+            </Badge>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-400">
@@ -292,7 +382,7 @@ export default function BiosSimulator() {
               {!diagnosticResult && (
                 <p className="text-xs text-gray-400 mt-1">
                   Press <kbd className="px-1 bg-gray-800 rounded">F1</kbd> to
-                  analyze error
+                  analyze error {isAnalyzing && "(Analyzing...)"}
                 </p>
               )}
             </div>
@@ -307,8 +397,22 @@ export default function BiosSimulator() {
             <Info className="text-blue-500 mt-0.5" size={18} />
             <div>
               <p className="text-blue-400 font-medium">Diagnostic Complete</p>
-              <p className="text-sm mt-1">{diagnosticResult}</p>
+              <div className="text-sm mt-1 whitespace-pre-line">
+                {diagnosticResult.split("\n").map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Loading Indicator */}
+      {isAnalyzing && (
+        <Card className="mb-4 border-yellow-900 bg-yellow-950/20 p-3">
+          <div className="flex items-center gap-3">
+            <Loader2 className="text-yellow-500 animate-spin" size={18} />
+            <span className="text-yellow-400">Analyzing error with LLM...</span>
           </div>
         </Card>
       )}
