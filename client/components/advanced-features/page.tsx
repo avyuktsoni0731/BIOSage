@@ -1,18 +1,74 @@
 "use client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Wifi, NetworkIcon as Ethernet, Keyboard } from "lucide-react";
+import {
+  Wifi,
+  NetworkIcon as Ethernet,
+  Cpu,
+  MemoryStickIcon as Memory,
+  HardDrive,
+  Clock,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 
+interface NetworkInterface {
+  iface: string;
+  type: string;
+  mac: string;
+  ip4: string;
+  ip6?: string;
+  speed: number;
+  dhcp: boolean;
+  rx_sec: number;
+  tx_sec: number;
+  gateway?: string;
+}
+
+interface SystemInfo {
+  biosVersion: string;
+  cpu: string;
+  memory: string;
+  storage: string;
+  bootMode: string;
+  graphics: string;
+  network: NetworkInterface[];
+  systemTime: string;
+  gateway: string;
+}
+
 export default function AdvancedFeatures() {
-  const [powerMode, setPowerMode] = useState("balanced");
-  const [batteryLevel, setBatteryLevel] = useState(85);
-  const [isCharging, setIsCharging] = useState(false);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [loading, setLoading] = useState(true);
   const [uptime, setUptime] = useState(0);
-  const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [mouseButtons, setMouseButtons] = useState<Set<number>>(new Set());
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const fetchSystemInfo = async () => {
+      try {
+        const response = await fetch("/api/system-info");
+        const data = await response.json();
+        setSystemInfo(data);
+      } catch (error) {
+        console.error("Failed to fetch system info:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSystemInfo();
+    const interval = setInterval(fetchSystemInfo, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setUptime((prev) => prev + 1);
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const formatUptime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -23,195 +79,156 @@ export default function AdvancedFeatures() {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Battery simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBatteryLevel((prev) => {
-        if (isCharging) {
-          return Math.min(100, prev + 0.1);
-        } else {
-          return Math.max(0, prev - 0.05);
-        }
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isCharging]);
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const getSignalStrength = (speed: number) => {
+    if (speed <= 10) return "Weak";
+    if (speed <= 50) return "Fair";
+    if (speed <= 100) return "Good";
+    return "Excellent";
+  };
+
+  if (loading) {
+    return (
+      <TabsContent value="advanced" className="space-y-4">
+        <Card className="border-gray-800 bg-gray-900/50 p-4">
+          <div className="flex justify-center py-8">
+            <div className="animate-pulse text-gray-400">
+              Loading system information...
+            </div>
+          </div>
+        </Card>
+      </TabsContent>
+    );
+  }
 
   return (
-    <>
-      {/* Advanced Features Tab */}
-      <TabsContent value="advanced" className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Network Interface Overview */}
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Wifi size={18} className="text-blue-400" />
-              <h2 className="text-lg font-medium">Network Interfaces</h2>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 bg-black/30 rounded">
-                <div className="flex items-center gap-2">
-                  <Ethernet size={16} className="text-green-400" />
-                  <div>
-                    <div className="text-sm font-medium">Ethernet</div>
-                    <div className="text-xs text-gray-400">eth0</div>
+    <TabsContent value="advanced" className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Network Interface Overview */}
+        <Card className="border-gray-800 bg-gray-900/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Wifi size={18} className="text-blue-400" />
+            <h2 className="text-lg font-medium">Network Interfaces</h2>
+          </div>
+          <div className="space-y-3">
+            {systemInfo?.network?.map((intf) => (
+              <div key={intf.iface}>
+                <div className="flex items-center justify-between p-2 bg-black/30 rounded">
+                  <div className="flex items-center gap-2">
+                    {intf.type === "wireless" ? (
+                      <Wifi size={16} className="text-blue-400" />
+                    ) : (
+                      <Ethernet size={16} className="text-green-400" />
+                    )}
+                    <div>
+                      <div className="text-sm font-medium">
+                        {intf.type === "wireless" ? "Wi-Fi" : "Ethernet"}
+                      </div>
+                      <div className="text-xs text-gray-400">{intf.iface}</div>
+                    </div>
                   </div>
+                  <Badge className="bg-green-950/30 text-green-400 border-green-800">
+                    {intf.operstate === "up" ? "Connected" : "Disconnected"}
+                  </Badge>
                 </div>
-                <Badge className="bg-green-950/30 text-green-400 border-green-800">
-                  Connected
-                </Badge>
-              </div>
 
-              <div className="text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">MAC Address:</span>
-                  <span>00:1B:44:11:3A:B7</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">IP Address:</span>
-                  <span>192.168.1.105</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Speed:</span>
-                  <span>1000 Mbps</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-2 bg-black/30 rounded">
-                <div className="flex items-center gap-2">
-                  <Wifi size={16} className="text-blue-400" />
-                  <div>
-                    <div className="text-sm font-medium">Wi-Fi</div>
-                    <div className="text-xs text-gray-400">wlan0</div>
-                  </div>
-                </div>
-                <Badge className="bg-blue-950/30 text-blue-400 border-blue-800">
-                  Connected
-                </Badge>
-              </div>
-
-              <div className="text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">MAC Address:</span>
-                  <span>A4:CF:12:B0:09:2D</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">IP Address:</span>
-                  <span>192.168.1.106</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Signal:</span>
-                  <span>-45 dBm (Excellent)</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Input Device Tester */}
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Keyboard size={18} className="text-purple-400" />
-              <h2 className="text-lg font-medium">Input Device Tester</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium mb-2">Keyboard</h3>
-                <div className="bg-black/30 p-3 rounded text-xs">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-400">Active Keys:</span>
-                    <span>{pressedKeys.size}</span>
-                  </div>
-                  <div className="min-h-[40px] flex flex-wrap gap-1">
-                    {Array.from(pressedKeys).map((key) => (
-                      <Badge
-                        key={key}
-                        className="bg-purple-950/30 text-purple-400 border-purple-800 text-xs"
-                      >
-                        {key}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Mouse</h3>
-                <div className="bg-black/30 p-3 rounded text-xs space-y-2">
+                <div className="text-xs space-y-1 mt-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Position:</span>
+                    <span className="text-gray-400">MAC:</span>
+                    <span>{intf.mac}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">IPv4:</span>
+                    <span>{intf.ip4}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Speed:</span>
                     <span>
-                      X: {mousePosition.x}, Y: {mousePosition.y}
+                      {intf.type === "wireless"
+                        ? `${getSignalStrength(intf.speed)} (${
+                            intf.speed
+                          } Mbps)`
+                        : `${intf.speed} Mbps`}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Buttons:</span>
-                    <div className="flex gap-1">
-                      {Array.from(mouseButtons).map((button) => (
-                        <Badge
-                          key={button}
-                          className="bg-blue-950/30 text-blue-400 border-blue-800 text-xs"
-                        >
-                          {button === 0 ? "L" : button === 1 ? "M" : "R"}
-                        </Badge>
-                      ))}
-                    </div>
+                    <span className="text-gray-400">Traffic:</span>
+                    <span>
+                      ↓ {formatBytes(intf.rx_sec)}/s ↑{" "}
+                      {formatBytes(intf.tx_sec)}/s
+                    </span>
                   </div>
                 </div>
               </div>
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Connected Devices</h3>
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span>USB Keyboard (HID)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span>USB Optical Mouse</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    <span>Touchpad (I2C)</span>
-                  </div>
-                </div>
+            ))}
+            <div className="text-xs space-y-1 mt-4">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Default Gateway:</span>
+                <span>{systemInfo?.gateway || "N/A"}</span>
               </div>
             </div>
-          </Card>
-        </div>
-
-        {/* System Logs */}
-        {/* <Card className="border-gray-800 bg-gray-900/50 p-4">
-          <h2 className="text-lg font-medium mb-3">System Event Log</h2>
-          <div className="bg-black/50 p-3 rounded text-sm font-mono h-40 overflow-y-auto">
-            <p className="text-green-400">
-              [{formatUptime(uptime)}] Performance profile changed to:{" "}
-              {profile.name}
-            </p>
-            <p className="text-blue-400">
-              [{formatUptime(uptime - 5)}] Power mode set to: {powerMode}
-            </p>
-            <p className="text-green-400">
-              [{formatUptime(uptime - 12)}] Network interface eth0 connected
-            </p>
-            <p className="text-green-400">
-              [{formatUptime(uptime - 18)}] Wi-Fi interface wlan0 connected to
-              network
-            </p>
-            <p className="text-yellow-400">
-              [{formatUptime(uptime - 25)}] Battery level:{" "}
-              {Math.round(batteryLevel)}%
-            </p>
-            <p className="text-blue-400">
-              [{formatUptime(uptime - 30)}] Input devices initialized
-            </p>
-            <p className="text-green-400">
-              [{formatUptime(uptime - 45)}] System boot completed successfully
-            </p>
           </div>
-        </Card> */}
-      </TabsContent>
-    </>
+        </Card>
+
+        {/* System Overview */}
+        <Card className="border-gray-800 bg-gray-900/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Cpu size={18} className="text-purple-400" />
+            <h2 className="text-lg font-medium">System Overview</h2>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-gray-400" />
+                <span className="text-sm">
+                  System Time: {currentTime.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-gray-400" />
+                <span className="text-sm">Uptime: {formatUptime(uptime)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Cpu size={14} className="text-gray-400" />
+                <span>CPU: {systemInfo?.cpu}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Memory size={14} className="text-gray-400" />
+                <span>Memory: {systemInfo?.memory}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <HardDrive size={14} className="text-gray-400" />
+                <span>Storage: {systemInfo?.storage}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">BIOS Version:</span>
+                <span>{systemInfo?.biosVersion}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Boot Mode:</span>
+                <span>{systemInfo?.bootMode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Graphics:</span>
+                <span>{systemInfo?.graphics}</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </TabsContent>
   );
 }
