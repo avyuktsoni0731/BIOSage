@@ -1,239 +1,173 @@
 "use client";
 
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "@/components/ui/chart";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import {
-  ChevronRight,
-  AlertCircle,
-  Info,
-  Cpu,
-  MemoryStickIcon as Memory,
-  HardDrive,
-  Thermometer,
-} from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useRef } from "react";
+import { TabsContent } from "@/components/ui/tabs";
 
-const generateTimeData = (points: number) => {
-  return Array.from({ length: points }, (_, i) => ({
-    time: i,
-    value: Math.floor(Math.random() * 60) + 20,
-  }));
-};
+import RowGPUAndNetwork from "./RowGPUAndNetwork";
+import Storage from "./storage";
+import Cpuandmemory from "./cpuandmemory";
+import RowDiskAndTemp from "./RowDiskAndTemp";
 
-const cpuData = generateTimeData(20);
-const ramData = generateTimeData(20);
-const tempData = generateTimeData(20);
+interface SystemMetrics {
+  cpu: {
+    usage: number;
+    temperature: number;
+  };
+  memory: {
+    usagePercent: number;
+    usedGB: string;
+    totalGB: string;
+  };
+  gpu: {
+    usage: number | null;
+    memoryUsed: string | null;
+    memoryTotal: string | null;
+  };
+  network: {
+    downloadSpeed: number | null;
+    uploadSpeed: number | null;
+    interface: string | null;
+  };
+  disk: {
+    readSpeed: number | null;
+    writeSpeed: number | null;
+  };
+  power: {
+    hasBattery: boolean;
+    percent: number | null;
+    isCharging: boolean | null;
+  } | null;
+  temperatures: {
+    cpu: number | null;
+    gpu: number | null;
+  };
+  storage: Array<{
+    name: string;
+    size: number;
+    used: number;
+    usagePercent: number;
+    type: string;
+  }>;
+}
+
+interface TimeSeriesData {
+  time: number;
+  value: number;
+}
+
+interface NetworkData {
+  time: number;
+  upload: number;
+  download: number;
+}
+
+interface DiskData {
+  time: number;
+  read: number;
+  write: number;
+}
 
 export default function HardwareMonitor() {
-  return (
-    <>
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Time series data for charts
+  const [cpuData, setCpuData] = useState<TimeSeriesData[]>([]);
+  const [ramData, setRamData] = useState<TimeSeriesData[]>([]);
+  const [tempData, setTempData] = useState<TimeSeriesData[]>([]);
+  const [gpuData, setGpuData] = useState<TimeSeriesData[]>([]);
+  const [networkData, setNetworkData] = useState<NetworkData[]>([]);
+  const [diskData, setDiskData] = useState<DiskData[]>([]);
+  
+  const timeCounter = useRef(0);
+
+  const fetchSystemMetrics = async () => {
+    try {
+      const response = await fetch('/api/system-info');
+      if (!response.ok) throw new Error('Failed to fetch system metrics');
+      
+      const data = await response.json();
+      setMetrics(data.metrics);
+      setError(null);
+      
+      // Update time series data
+      const currentTime = timeCounter.current++;
+      
+      setCpuData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.cpu.usage }]);
+      setRamData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.memory.usagePercent }]);
+      
+      if (data.metrics.temperatures.cpu !== null) {
+        setTempData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.temperatures.cpu }]);
+      }
+      
+      if (data.metrics.gpu.usage !== null) {
+        setGpuData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.gpu.usage }]);
+      }
+      
+      if (data.metrics.network.downloadSpeed !== null && data.metrics.network.uploadSpeed !== null) {
+        setNetworkData(prev => [...prev.slice(-49), { 
+          time: currentTime, 
+          upload: data.metrics.network.uploadSpeed,
+          download: data.metrics.network.downloadSpeed
+        }]);
+      }
+      
+      if (data.metrics.disk.readSpeed !== null && data.metrics.disk.writeSpeed !== null) {
+        setDiskData(prev => [...prev.slice(-49), { 
+          time: currentTime, 
+          read: data.metrics.disk.readSpeed,
+          write: data.metrics.disk.writeSpeed
+        }]);
+      }
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch
+    fetchSystemMetrics();
+    
+    // Update every 2 seconds
+    const interval = setInterval(fetchSystemMetrics, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
       <TabsContent value="hardware" className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Cpu size={18} className="text-blue-400" />
-              <h2 className="text-lg font-medium">CPU Usage</h2>
-            </div>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={cpuData}>
-                  <XAxis dataKey="time" tick={false} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-gray-800 border border-gray-700 p-2 text-xs">
-                            CPU: {payload[0].value}%
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 flex justify-between text-sm">
-              <span className="text-gray-400">Current: 45%</span>
-              <span className="text-gray-400">Max: 78%</span>
-            </div>
-          </Card>
-
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Memory size={18} className="text-purple-400" />
-              <h2 className="text-lg font-medium">Memory Usage</h2>
-            </div>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={ramData}>
-                  <XAxis dataKey="time" tick={false} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-gray-800 border border-gray-700 p-2 text-xs">
-                            RAM: {payload[0].value}%
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#a855f7"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 flex justify-between text-sm">
-              <span className="text-gray-400">Used: 14.2 GB</span>
-              <span className="text-gray-400">Total: 32 GB</span>
-            </div>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Thermometer size={18} className="text-red-400" />
-              <h2 className="text-lg font-medium">Temperature</h2>
-            </div>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={tempData}>
-                  <XAxis dataKey="time" tick={false} />
-                  <YAxis domain={[20, 100]} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-gray-800 border border-gray-700 p-2 text-xs">
-                            Temp: {payload[0].value}°C
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">CPU:</span>
-                <span>65°C</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">GPU:</span>
-                <span>58°C</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Motherboard:</span>
-                <span>42°C</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">SSD:</span>
-                <span>39°C</span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <HardDrive size={18} className="text-green-400" />
-              <h2 className="text-lg font-medium">Storage Status</h2>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>NVMe SSD (2TB)</span>
-                  <span>42% used</span>
-                </div>
-                <Progress value={42} className="h-1" />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>SATA SSD (1TB)</span>
-                  <span>67% used</span>
-                </div>
-                <Progress value={67} className="h-1" />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>HDD (4TB)</span>
-                  <span>23% used</span>
-                </div>
-                <Progress value={23} className="h-1" />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <h3 className="text-sm font-medium mb-2">SMART Status</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">NVMe SSD:</span>
-                  <Badge
-                    variant="outline"
-                    className="bg-green-950/30 text-green-400 border-green-800"
-                  >
-                    Good
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">SATA SSD:</span>
-                  <Badge
-                    variant="outline"
-                    className="bg-green-950/30 text-green-400 border-green-800"
-                  >
-                    Good
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">HDD:</span>
-                  <Badge
-                    variant="outline"
-                    className="bg-yellow-950/30 text-yellow-400 border-yellow-800"
-                  >
-                    Warning
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          </Card>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-400">Loading system metrics...</div>
         </div>
       </TabsContent>
-    </>
+    );
+  }
+
+  if (error) {
+    return (
+      <TabsContent value="hardware" className="space-y-4">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-400">Error: {error}</div>
+        </div>
+      </TabsContent>
+    );
+  }
+
+  if (!metrics) return null;
+
+  return (
+    <TabsContent value="hardware" className="space-y-4">
+
+      <Cpuandmemory metrics={metrics} cpuData={cpuData} ramData={ramData} />
+      <RowGPUAndNetwork metrics={metrics} gpuData={gpuData} networkData={networkData} />
+      <RowDiskAndTemp metrics={metrics} diskData={diskData} tempData={tempData} />
+      <Storage metrics={metrics}/>
+
+    </TabsContent>
   );
 }
