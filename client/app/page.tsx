@@ -117,9 +117,7 @@ export default function BiosSimulator() {
   // Check LLM service status
   const checkLlmStatus = async () => {
     try {
-      const response = await fetch(
-        "https://bachelor-expressed-consulting-port.trycloudflare.com"
-      );
+      const response = await fetch("/api/llm-status");
       // const response = await fetch("http://localhost:3001/api/health");
       const data = await response;
       // const data = await response.json();
@@ -269,7 +267,7 @@ export default function BiosSimulator() {
     setIsAnalyzing(true);
     try {
       const response = await fetch(
-        "https://bachelor-expressed-consulting-port.trycloudflare.com/api/generate",
+        "/api/llm-generate", // Adjust the endpoint as needed
         {
           // const response = await fetch("http://localhost:3001/api/generate", {
           method: "POST",
