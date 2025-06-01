@@ -27,7 +27,7 @@ export default async function handler(
 
     try {
         const upstreamResponse = await fetch(
-            "https://bachelor-expressed-consulting-port.trycloudflare.com/api/generate",
+            `http://${process.env.NEXT_PUBLIC_EC2_IP}:11434/api/generate`,
             {
                 method: "POST",
                 headers: {
