@@ -19,11 +19,12 @@ interface SystemInfo {
 }
 
 interface DiagnosticResponse {
-  generated_text: string;
-  usage?: {
-    prompt_tokens: number | string;
-    generated_tokens: number | string;
-  };
+  // generated_text: string;
+  response: string;
+  // usage?: {
+  //   prompt_tokens: number | string;
+  //   generated_tokens: number | string;
+  // };
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -116,11 +117,16 @@ export default function BiosSimulator() {
   // Check LLM service status
   const checkLlmStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/health");
-      const data = await response.json();
-      if (data.status === "ready") {
+      const response = await fetch(
+        "https://bachelor-expressed-consulting-port.trycloudflare.com"
+      );
+      // const response = await fetch("http://localhost:3001/api/health");
+      const data = await response;
+      // const data = await response.json();
+      console.log("LLM Status Response:", data);
+      if (data.status === 200) {
         setLlmStatus("ready");
-      } else if (data.status === "loading") {
+      } else if (data.status !== 200) {
         setLlmStatus("loading");
       } else {
         setLlmStatus("error");
@@ -192,7 +198,7 @@ export default function BiosSimulator() {
           // Simulate an error at 65%
           if (newProgress === 65) {
             setErrorMessage(
-              "ERROR: Memory module in DIMM_A2 reporting inconsistent timings"
+              "ERROR: Memory module in DIMM_A2 reporting inconsistent timings. (tell me what this error means, and how to fix it under 100 words)"
             );
           }
 
@@ -262,24 +268,31 @@ export default function BiosSimulator() {
 
     setIsAnalyzing(true);
     try {
-      const response = await fetch("http://localhost:3001/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: errorMessage,
-          maxTokens: 200,
-          temperature: 0.3,
-        }),
-      });
+      const response = await fetch(
+        "https://bachelor-expressed-consulting-port.trycloudflare.com/api/generate",
+        {
+          // const response = await fetch("http://localhost:3001/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: errorMessage,
+            // maxTokens: 200,
+            // temperature: 0.3,
+            model: "llama3.2",
+            stream: false,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to analyze error");
       }
 
       const data: DiagnosticResponse = await response.json();
-      setDiagnosticResult(data.generated_text);
+      setDiagnosticResult(data.response);
+      // setDiagnosticResult(data.generated_text);
     } catch (error) {
       console.error("Error analysis failed:", error);
       setDiagnosticResult(
