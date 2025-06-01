@@ -195,7 +195,7 @@ export default function BiosSimulator() {
           // Simulate an error at 65%
           if (newProgress === 65) {
             setErrorMessage(
-              "ERROR: Memory module in DIMM_A2 reporting inconsistent timings. (tell me what this error means, and how to fix it under 100 words)"
+              "ERROR: Memory module in DIMM_A2 reporting inconsistent timings."
             );
           }
 
@@ -273,7 +273,7 @@ export default function BiosSimulator() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            prompt: errorMessage,
+            prompt: `${errorMessage} (tell me what this error means, and how to fix it under 100 words)`,
             // maxTokens: 200,
             // temperature: 0.3,
             model: "llama3.2",
