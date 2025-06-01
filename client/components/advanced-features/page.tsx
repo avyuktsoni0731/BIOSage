@@ -23,6 +23,7 @@ interface NetworkInterface {
   rx_sec: number;
   tx_sec: number;
   gateway?: string;
+  operstate: string;
 }
 
 interface SystemInfo {
