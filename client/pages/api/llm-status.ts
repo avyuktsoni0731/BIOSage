@@ -11,7 +11,7 @@ export default async function handler(
     res: NextApiResponse<void | ErrorResponse>
 ) {
     try {
-        const upstreamRes: Response = await fetch('https://bachelor-expressed-consulting-port.trycloudflare.com', {
+        const upstreamRes: Response = await fetch( `http://${process.env.NEXT_PUBLIC_EC2_IP}:11434`, {
             method: 'GET',
         });
 

@@ -118,7 +118,6 @@ export default function BiosSimulator() {
   const checkLlmStatus = async () => {
     try {
       const response = await fetch("/api/llm-status");
-      // const response = await fetch("http://localhost:3001/api/health");
       const data = await response;
       // const data = await response.json();
       console.log("LLM Status Response:", data);
@@ -269,7 +268,6 @@ export default function BiosSimulator() {
       const response = await fetch(
         "/api/llm-generate", // Adjust the endpoint as needed
         {
-          // const response = await fetch("http://localhost:3001/api/generate", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
