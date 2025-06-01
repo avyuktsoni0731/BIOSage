@@ -71,7 +71,7 @@ export default function HardwareMonitor() {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Time series data for charts
   const [cpuData, setCpuData] = useState<TimeSeriesData[]>([]);
   const [ramData, setRamData] = useState<TimeSeriesData[]>([]);
@@ -79,50 +79,73 @@ export default function HardwareMonitor() {
   const [gpuData, setGpuData] = useState<TimeSeriesData[]>([]);
   const [networkData, setNetworkData] = useState<NetworkData[]>([]);
   const [diskData, setDiskData] = useState<DiskData[]>([]);
-  
+
   const timeCounter = useRef(0);
 
   const fetchSystemMetrics = async () => {
     try {
-      const response = await fetch('/api/system-info');
-      if (!response.ok) throw new Error('Failed to fetch system metrics');
-      
+      const response = await fetch("/api/system-info");
+      if (!response.ok) throw new Error("Failed to fetch system metrics");
+
       const data = await response.json();
       setMetrics(data.metrics);
       setError(null);
-      
+
       // Update time series data
       const currentTime = timeCounter.current++;
-      
-      setCpuData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.cpu.usage }]);
-      setRamData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.memory.usagePercent }]);
-      
+
+      setCpuData((prev) => [
+        ...prev.slice(-49),
+        { time: currentTime, value: data.metrics.cpu.usage },
+      ]);
+      setRamData((prev) => [
+        ...prev.slice(-49),
+        { time: currentTime, value: data.metrics.memory.usagePercent },
+      ]);
+
       if (data.metrics.temperatures.cpu !== null) {
-        setTempData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.temperatures.cpu }]);
+        setTempData((prev) => [
+          ...prev.slice(-49),
+          { time: currentTime, value: data.metrics.temperatures.cpu },
+        ]);
       }
-      
+
       if (data.metrics.gpu.usage !== null) {
-        setGpuData(prev => [...prev.slice(-49), { time: currentTime, value: data.metrics.gpu.usage }]);
+        setGpuData((prev) => [
+          ...prev.slice(-49),
+          { time: currentTime, value: data.metrics.gpu.usage },
+        ]);
       }
-      
-      if (data.metrics.network.downloadSpeed !== null && data.metrics.network.uploadSpeed !== null) {
-        setNetworkData(prev => [...prev.slice(-49), { 
-          time: currentTime, 
-          upload: data.metrics.network.uploadSpeed,
-          download: data.metrics.network.downloadSpeed
-        }]);
+
+      if (
+        data.metrics.network.downloadSpeed !== null &&
+        data.metrics.network.uploadSpeed !== null
+      ) {
+        setNetworkData((prev) => [
+          ...prev.slice(-49),
+          {
+            time: currentTime,
+            upload: data.metrics.network.uploadSpeed,
+            download: data.metrics.network.downloadSpeed,
+          },
+        ]);
       }
-      
-      if (data.metrics.disk.readSpeed !== null && data.metrics.disk.writeSpeed !== null) {
-        setDiskData(prev => [...prev.slice(-49), { 
-          time: currentTime, 
-          read: data.metrics.disk.readSpeed,
-          write: data.metrics.disk.writeSpeed
-        }]);
+
+      if (
+        data.metrics.disk.readSpeed !== null &&
+        data.metrics.disk.writeSpeed !== null
+      ) {
+        setDiskData((prev) => [
+          ...prev.slice(-49),
+          {
+            time: currentTime,
+            read: data.metrics.disk.readSpeed,
+            write: data.metrics.disk.writeSpeed,
+          },
+        ]);
       }
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
     } finally {
       setLoading(false);
     }
@@ -131,10 +154,10 @@ export default function HardwareMonitor() {
   useEffect(() => {
     // Initial fetch
     fetchSystemMetrics();
-    
+
     // Update every 2 seconds
     const interval = setInterval(fetchSystemMetrics, 2000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -162,12 +185,40 @@ export default function HardwareMonitor() {
 
   return (
     <TabsContent value="hardware" className="space-y-4">
-
-      <Cpuandmemory metrics={metrics} cpuData={cpuData} ramData={ramData} />
-      <RowGPUAndNetwork metrics={metrics} gpuData={gpuData} networkData={networkData} />
-      <RowDiskAndTemp metrics={metrics} diskData={diskData} tempData={tempData} />
-      <Storage metrics={metrics}/>
-
+      <Cpuandmemory
+        metrics={{
+          cpu: metrics.cpu,
+          temperatures: {
+            cpu:
+              metrics.temperatures.cpu === null
+                ? undefined
+                : metrics.temperatures.cpu,
+          },
+          memory: {
+            usedGB: Number(metrics.memory.usedGB),
+            totalGB: Number(metrics.memory.totalGB),
+          },
+        }}
+        cpuData={cpuData.map((d) => ({
+          time: d.time.toString(),
+          value: d.value,
+        }))}
+        ramData={ramData.map((d) => ({
+          time: d.time.toString(),
+          value: d.value,
+        }))}
+      />
+      <RowGPUAndNetwork
+        metrics={metrics}
+        gpuData={gpuData}
+        networkData={networkData}
+      />
+      <RowDiskAndTemp
+        metrics={metrics}
+        diskData={diskData}
+        tempData={tempData}
+      />
+      <Storage metrics={metrics} />
     </TabsContent>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Cpu, MemoryStick } from "lucide-react";
 import {
@@ -7,10 +7,31 @@ import {
   YAxis,
   Tooltip,
   AreaChart,
-  Area
+  Area,
 } from "recharts";
 
-const Cpuandmemory = ({ metrics, cpuData, ramData }) => {
+interface CpuAndMemoryProps {
+  metrics: {
+    cpu: {
+      usage: number;
+    };
+    temperatures: {
+      cpu?: number;
+    };
+    memory: {
+      usedGB: number;
+      totalGB: number;
+    };
+  };
+  cpuData: Array<{ time: string; value: number }>;
+  ramData: Array<{ time: string; value: number }>;
+}
+
+const Cpuandmemory: React.FC<CpuAndMemoryProps> = ({
+  metrics,
+  cpuData,
+  ramData,
+}) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card className="border-gray-800 bg-gray-900/50 p-4">
@@ -21,8 +42,16 @@ const Cpuandmemory = ({ metrics, cpuData, ramData }) => {
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cpuData}>
-              <XAxis dataKey="time" tick={false} axisLine={{ stroke: 'transparent' }} />
-              <YAxis domain={[0, 100]} tick={false} axisLine={{ stroke: 'transparent' }} />
+              <XAxis
+                dataKey="time"
+                tick={false}
+                axisLine={{ stroke: "transparent" }}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={false}
+                axisLine={{ stroke: "transparent" }}
+              />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
@@ -48,7 +77,9 @@ const Cpuandmemory = ({ metrics, cpuData, ramData }) => {
         </div>
         <div className="mt-2 flex justify-between text-sm">
           <span className="text-gray-400">Current: {metrics.cpu.usage}%</span>
-          <span className="text-gray-400">Temp: {metrics.temperatures.cpu ?? 'N/A'}°C</span>
+          <span className="text-gray-400">
+            Temp: {metrics.temperatures.cpu ?? "N/A"}°C
+          </span>
         </div>
       </Card>
 
@@ -60,8 +91,16 @@ const Cpuandmemory = ({ metrics, cpuData, ramData }) => {
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={ramData}>
-              <XAxis dataKey="time" tick={false} axisLine={{ stroke: 'transparent' }} />
-              <YAxis domain={[0, 100]} tick={false} axisLine={{ stroke: 'transparent' }} />
+              <XAxis
+                dataKey="time"
+                tick={false}
+                axisLine={{ stroke: "transparent" }}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={false}
+                axisLine={{ stroke: "transparent" }}
+              />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
@@ -86,12 +125,16 @@ const Cpuandmemory = ({ metrics, cpuData, ramData }) => {
           </ResponsiveContainer>
         </div>
         <div className="mt-2 flex justify-between text-sm">
-          <span className="text-gray-400">Used: {metrics.memory.usedGB} GB</span>
-          <span className="text-gray-400">Total: {metrics.memory.totalGB} GB</span>
+          <span className="text-gray-400">
+            Used: {metrics.memory.usedGB} GB
+          </span>
+          <span className="text-gray-400">
+            Total: {metrics.memory.totalGB} GB
+          </span>
         </div>
       </Card>
     </div>
-  )
-}
+  );
+};
 
 export default Cpuandmemory;

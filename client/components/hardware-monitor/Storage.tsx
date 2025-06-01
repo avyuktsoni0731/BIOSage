@@ -2,7 +2,15 @@ import React from "react";
 import { Card } from "../ui/card";
 import { HardDrive } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-const Storage = ({ metrics }) => {
+type StorageMetrics = {
+  storage: {
+    name: string;
+    size: number;
+    usagePercent: number;
+  }[];
+};
+
+const Storage = ({ metrics }: { metrics: StorageMetrics }) => {
   return (
     <div className="grid grid-cols-1 gap-4">
       <Card className="border-gray-800 bg-gray-900/50 p-4">
