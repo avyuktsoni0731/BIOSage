@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef,useCallback  } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +10,7 @@ import { AlertCircle, Info, Loader2 } from "lucide-react";
 import HardwareMonitor from "@/components/hardware-monitor/page";
 import AdvancedFeatures from "@/components/advanced-features/page";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 interface SystemInfo {
   biosVersion: string;
   cpu: string;
@@ -20,12 +21,7 @@ interface SystemInfo {
 }
 
 interface DiagnosticResponse {
-  // generated_text: string;
   response: string;
-  // usage?: {
-  //   prompt_tokens: number | string;
-  //   generated_tokens: number | string;
-  // };
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -145,7 +141,7 @@ export default function BiosSimulator() {
 
     setIsAnalyzing(true);
     try {
-      const prompt = `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in ${language} language. Do NOT use any kind of markdown formatting, just plain text, or bullet points if needed)`;
+      const prompt = `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in ${language} language)`;
 
       const response = await fetch("/api/llm-generate", {
         method: "POST",
@@ -228,8 +224,6 @@ export default function BiosSimulator() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [errorMessage, diagnosticResult, analyzeError]);
 
- 
-
   const resetSystem = () => {
     setBootProgress(0);
     setBootStage("Initializing hardware...");
@@ -244,21 +238,6 @@ export default function BiosSimulator() {
       tabIndex={0}
     >
       {/* Header */}
-      {/* <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-white">BIOSage v2.0</h1>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-400">
-            BOOT STAGE: <span className="text-white">{bootStage}</span>
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <Progress value={bootProgress} className="w-40 h-2" />
-            <span className="text-xs">{bootProgress}%</span>
-          </div>
-        </div>
-      </div> */}
-
       <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-xl font-bold text-white">BIOSage v2.0</h1>
@@ -299,7 +278,12 @@ export default function BiosSimulator() {
             <SelectTrigger className="w-28 h-8 text-xs bg-gray-900 border-gray-800">
               <SelectValue placeholder="Language" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border border-gray-800 text-white">
+            <SelectContent 
+              className="bg-gray-900 border border-gray-800 text-white z-50"
+              side="bottom"
+              align="end"
+              sideOffset={4}
+            >
               <SelectItem
                 value="english"
                 className="text-xs text-white hover:bg-gray-700 focus:bg-gray-700"
@@ -310,13 +294,13 @@ export default function BiosSimulator() {
                 value="hindi"
                 className="text-xs text-white hover:bg-gray-700 focus:bg-gray-700"
               >
-                Hindi
+                हिंदी
               </SelectItem>
               <SelectItem
                 value="russian"
                 className="text-xs text-white hover:bg-gray-700 focus:bg-gray-700"
               >
-                Russian
+                Русский
               </SelectItem>
             </SelectContent>
           </Select>
@@ -361,7 +345,7 @@ export default function BiosSimulator() {
       )}
 
       {/* Diagnostic Result */}
-      {diagnosticResult && (
+      {diagnosticResult && !isAnalyzing && (
         <Card className="mb-4 border-blue-900 bg-blue-950/20 p-3">
           <div className="flex items-start gap-3">
             <Info className="text-blue-500 mt-0.5" size={18} />
