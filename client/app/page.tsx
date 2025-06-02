@@ -120,7 +120,7 @@ export default function BiosSimulator() {
       const response = await fetch("/api/llm-status");
       const data = await response;
       // const data = await response.json();
-      console.log("LLM Status Response:", data);
+      // console.log("LLM Status Response:", data);
       if (data.status === 200) {
         setLlmStatus("ready");
       } else if (data.status !== 200) {
