@@ -28,11 +28,20 @@ Welcome to **BIOSage 2.0**, a next-generation, intelligent BIOS-style web interf
 
 ## 📸 Screenshots
 
-> Add screenshots here showing:
-> - System stats panel
-> - LLM response with translated versions
-> - Terminal-like UI and prompt
-> - Error diagnostic demo
+### BIOSage Landing Page
+![system-stats](https://github.com/avyuktsoni0731/BIOSage/blob/f6e62f2865992dd27cd9115eb9ee4d314bf10b3d/public/landing.png)
+
+### Error Response
+![error-response](https://github.com/avyuktsoni0731/BIOSage/blob/f6e62f2865992dd27cd9115eb9ee4d314bf10b3d/public/response.png)
+
+### EC2 Ollama Response
+![ollama-response](https://github.com/avyuktsoni0731/BIOSage/blob/f6e62f2865992dd27cd9115eb9ee4d314bf10b3d/public/ollama-response.png)
+
+### Hardware Monitor
+![hardware-monitor](https://github.com/avyuktsoni0731/BIOSage/blob/f6e62f2865992dd27cd9115eb9ee4d314bf10b3d/public/hardware-monitor.png)
+
+### Advanced Features
+![advanced-features](https://github.com/avyuktsoni0731/BIOSage/blob/f6e62f2865992dd27cd9115eb9ee4d314bf10b3d/public/advanced-features.png)
 
 ---
 
