@@ -145,7 +145,7 @@ export default function BiosSimulator() {
 
     setIsAnalyzing(true);
     try {
-      const prompt = `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in ${language} language)`;
+      const prompt = `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in ${language} language. Do NOT use any kind of markdown formatting, just plain text, or bullet points if needed)`;
 
       const response = await fetch("/api/llm-generate", {
         method: "POST",
