@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef,useCallback  } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +9,7 @@ import { BIOS_ERRORS } from "@/lib/bios-errors";
 import { AlertCircle, Info, Loader2 } from "lucide-react";
 import HardwareMonitor from "@/components/hardware-monitor/page";
 import AdvancedFeatures from "@/components/advanced-features/page";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 interface SystemInfo {
   biosVersion: string;
   cpu: string;
@@ -51,6 +51,7 @@ export default function BiosSimulator() {
   const [uptime, setUptime] = useState(0);
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [language, setLanguage] = useState<"hindi" | "english" | "russian">("english");
   const [mouseButtons, setMouseButtons] = useState<Set<number>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [llmStatus, setLlmStatus] = useState<
@@ -137,8 +138,42 @@ export default function BiosSimulator() {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [bootProgress, errorMessage]);
+  }, [bootProgress]);
 
+  const analyzeError = useCallback(async () => {
+    if (!errorMessage) return;
+
+    setIsAnalyzing(true);
+    try {
+      const prompt = `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in ${language} language)`;
+
+      const response = await fetch("/api/llm-generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          model: "llama3.2",
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze error");
+      }
+
+      const data: DiagnosticResponse = await response.json();
+      setDiagnosticResult(data.response);
+    } catch (error) {
+      console.error("Error analysis failed:", error);
+      setDiagnosticResult(
+        "Failed to analyze error. Please check the LLM service status."
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [errorMessage, language]);
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -150,16 +185,16 @@ export default function BiosSimulator() {
               prev === "dashboard"
                 ? "advanced"
                 : prev === "advanced"
-                ? "hardware"
-                : "dashboard"
+                  ? "hardware"
+                  : "dashboard"
             );
           } else {
             setActiveTab((prev) =>
               prev === "dashboard"
                 ? "hardware"
                 : prev === "hardware"
-                ? "advanced"
-                : "dashboard"
+                  ? "advanced"
+                  : "dashboard"
             );
           }
           break;
@@ -173,8 +208,8 @@ export default function BiosSimulator() {
           break;
         case "F1":
           e.preventDefault();
-          if (errorMessage && !diagnosticResult) {
-            analyzeError();
+          if (errorMessage) {
+            analyzeError(); // Now uses the latest version with current language
           }
           break;
         case "F5":
@@ -191,46 +226,9 @@ export default function BiosSimulator() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [errorMessage, diagnosticResult]);
+  }, [errorMessage, diagnosticResult, analyzeError]);
 
-  const analyzeError = async () => {
-    if (!errorMessage) return;
-
-    setIsAnalyzing(true);
-    try {
-      const response = await fetch(
-        "/api/llm-generate", // Adjust the endpoint as needed
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in hindi language)`,
-            // maxTokens: 200,
-            // temperature: 0.3,
-            model: "llama3.2",
-            stream: false,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to analyze error");
-      }
-
-      const data: DiagnosticResponse = await response.json();
-      setDiagnosticResult(data.response);
-      // setDiagnosticResult(data.generated_text);
-    } catch (error) {
-      console.error("Error analysis failed:", error);
-      setDiagnosticResult(
-        "Failed to analyze error. Please check the LLM service status."
-      );
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+ 
 
   const resetSystem = () => {
     setBootProgress(0);
@@ -272,26 +270,56 @@ export default function BiosSimulator() {
                 llmStatus === "ready"
                   ? "bg-green-950/30 text-green-400 border-green-800"
                   : llmStatus === "loading"
-                  ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
-                  : "bg-red-950/30 text-red-400 border-red-800"
+                    ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
+                    : "bg-red-950/30 text-red-400 border-red-800"
               }
             >
               {llmStatus === "ready"
                 ? "Ready"
                 : llmStatus === "loading"
-                ? "Loading"
-                : "Unavailable"}
+                  ? "Loading"
+                  : "Unavailable"}
             </Badge>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-400">
-            BOOT STAGE: <span className="text-white">{bootStage}</span>
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <Progress value={bootProgress} className="w-40 h-2" />
-            <span className="text-xs">{bootProgress}%</span>
+        <div className="text-right flex items-center gap-4">
+          <div className="text-sm">
+            <p className="text-gray-400">
+              BOOT STAGE: <span className="text-white">{bootStage}</span>
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <Progress value={bootProgress} className="w-40 h-2" />
+              <span className="text-xs">{bootProgress}%</span>
+            </div>
           </div>
+          <Select
+            value={language}
+            onValueChange={(value: "hindi" | "english" | "russian") => setLanguage(value)}
+          > 
+            <SelectTrigger className="w-28 h-8 text-xs bg-gray-900 border-gray-800">
+              <SelectValue placeholder="Language" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-900 border border-gray-800 text-white">
+              <SelectItem
+                value="english"
+                className="text-xs text-white hover:bg-gray-700 focus:bg-gray-700"
+              >
+                English
+              </SelectItem>
+              <SelectItem
+                value="hindi"
+                className="text-xs text-white hover:bg-gray-700 focus:bg-gray-700"
+              >
+                Hindi
+              </SelectItem>
+              <SelectItem
+                value="russian"
+                className="text-xs text-white hover:bg-gray-700 focus:bg-gray-700"
+              >
+                Russian
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
