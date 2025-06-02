@@ -494,7 +494,7 @@ export default function BiosSimulator() {
               </p>
               <p className="text-green-400">[00:00:13] Running memory tests</p>
               <p className="text-red-400">
-                [00:00:15] {errorMessage || "ERROR: Memory module in DIMM_A2 reporting inconsistent timings"}
+                [00:00:15] {errorMessage}
               </p>
               <p className="text-yellow-400">
                 [00:00:16] WARNING: Memory running at reduced speed

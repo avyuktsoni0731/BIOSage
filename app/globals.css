@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+::-webkit-scrollbar{
+  background-color: black;
+}
 /* 
 @custom-variant dark (&:is(.dark *));
 
