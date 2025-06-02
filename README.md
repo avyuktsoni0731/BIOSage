@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔧 BIOSage 2.0: Smart BIOS Companion with Integrated Local LLM
 
-## Getting Started
+Welcome to **BIOSage 2.0**, a next-generation, intelligent BIOS-style web interface designed to replace outdated, static BIOS UIs with an AI-powered system insight platform. Featuring real-time diagnostics, human-readable explanations, and multilingual support — all while running offline or over LAN.
 
-First, run the development server:
+## 🚀 Project Highlights
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- ✅ Reimagined BIOS Interface with terminal-inspired UI
+- 🧠 Integrated LLM (LLaMA 3.2B via Ollama) for smart responses and diagnostics
+- 🌐 Language translation for LLM outputs: **Hindi**, **English**, **Russian**
+- 📦 Full system diagnostics via `systeminformation` module
+- 🔌 Seamless backend-to-AI integration using local EC2 instance
+- 📊 Real-time monitoring of CPU, RAM, storage, network, temps, and more
+- 🔒 Works offline (LAN mode) with private EC2-hosted LLM — No internet needed
+
+---
+
+## 🧑‍💻 Tech Stack
+
+| Layer        | Tech Used                                 |
+|--------------|--------------------------------------------|
+| **Frontend** | Next.js, Tailwind CSS, React, TypeScript   |
+| **Backend**  | Node.js, Express, systeminformation        |
+| **LLM Engine** | [Ollama](https://ollama.com) running LLaMA 3.2B |
+| **Hosting**  | Vercel (frontend), EC2 (backend LLM instance) |
+| **Translation** | Google Translate API / Custom Dictionary Map |
+
+---
+
+## 📸 Screenshots
+
+> Add screenshots here showing:
+> - System stats panel
+> - LLM response with translated versions
+> - Terminal-like UI and prompt
+> - Error diagnostic demo
+
+---
+
+## 🛠 Features Breakdown
+
+### ⚙️ Smart System Insights
+- Uses [`systeminformation`](https://www.npmjs.com/package/systeminformation) to fetch:
+  - CPU, RAM, Drives
+  - Battery status, network stats
+  - BIOS info, motherboard, and thermal sensors
+
+### 🧠 Local LLM Support
+- Prompts are sent to a locally running Ollama server (on Amazon EC2).
+- Model used: `llama3:3b-instruct` — optimized for fast, high-quality local inference.
+- No internet dependency required in BIOS — runs entirely on LAN.
+
+### 🌍 Language Translation
+- LLM responses are dynamically translated into:
+  - **🇮🇳 Hindi**
+  - **🇺🇸 English**
+  - **🇷🇺 Russian**
+- Choose your preferred language for BIOS suggestions and error explanations.
+
+### 📉 Real-time Telemetry
+- Frontend displays live data for:
+  - Fan RPM
+  - CPU temperature
+  - System uptime
+  - Memory usage and load averages
+
+---
+
+## 📁 Project Structure
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+bios-2.0/
+├── frontend/                # Next.js frontend
+│   ├── pages/
+│   ├── components/
+│   └── utils/
+│   └── api/llm-generate     # LLM interaction (hosted on EC2)
+└── README.md
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## ⚠️ Deployment Considerations
 
-To learn more about Next.js, take a look at the following resources:
+### ✅ Works Locally
+- On local systems (e.g. inside a BIOS-like Linux shell), `systeminformation` works flawlessly.
+- Ollama requests are sent to a LAN-accessible IP (your EC2 instance), with low latency.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 🚫 Vercel Limitations
+- If deployed on **Vercel**, direct hardware access is **not** possible due to:
+  - Container isolation
+  - No access to system `/dev/` or hardware APIs
+- But that’s fine — BIOS runs on the local machine, and this is just the **UI demo**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> 🔐 This doesn’t affect production use — because BIOS is inherently local.  
+> On local installs (or embedded firmware), everything works as intended.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 💬 Sample Usage (Terminal-Style Prompts)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+
+> diagnose-cpu
+> LLM: Your CPU is currently operating under high thermal load. Consider increasing airflow or underclocking.
+
+> why-is-my-pc-shutting-down
+> LLM: Sudden shutdowns are often caused by power supply instability or overheating...
+
+> हिंदी में बताओ
+> LLM (Hindi): आपके CPU का तापमान बहुत अधिक है। कृपया फैन की स्थिति जांचें या हीटसिंक लगाएं।
+
+> по-русски
+> LLM (Russian): Ваш процессор перегревается. Проверьте систему охлаждения.
+
+````
+
+---
+
+## 🌐 API Endpoints
+
+| Route                  | Purpose                             |
+|------------------------|-------------------------------------|
+| `GET /api/system-info`     | Fetches real-time system data       |
+| `POST /api/generate`     | Sends a prompt to the LLM server    |
+| `POST /api/generate`  | Translates response to chosen lang  |
+
+---
+
+## 🧪 How to Run
+
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/avyuktsoni0731/biosage.git
+
+2. Install frontend:
+
+   ```bash
+   npm install && npm run dev
+
+3. Run Ollama (on EC2):
+   - Create a `.env` file with `NEXT_PUBLIC_EC2_IP` environment variable with `<public_ec2_ip>` variable value (all thanks to `@souvlakee` for providing us w/ the EC2 instance).
+   - PS: he knows the IP (if you guys wanna test it out :D)
+
+---
+
+## 📹 Demo Video
+
+> https://youtu.be/poh1ABrmZHw
