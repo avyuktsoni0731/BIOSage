@@ -1,9 +1,16 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Monitor, Wifi } from "lucide-react";
+import { Monitor, Wifi,HardDrive } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area, LineChart, Line } from "recharts";
-
+type StorageMetrics = {
+  storage: {
+    name: string;
+    size: number;
+    usagePercent: number;
+  }[];
+};
 interface TimeSeriesData {
   time: number;
   value: number;
@@ -63,36 +70,25 @@ interface Props {
 export default function RowGPUAndNetwork({ metrics, gpuData, networkData }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {metrics.gpu.usage !== null && (
         <Card className="border-gray-800 bg-gray-900/50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Monitor size={18} className="text-emerald-400" />
-            <h2 className="text-lg font-medium">GPU Usage</h2>
-          </div>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={gpuData}>
-                <XAxis dataKey="time" tick={false} axisLine={{ stroke: 'transparent' }} />
-                <YAxis domain={[0, 100]} tick={false} axisLine={{ stroke: 'transparent' }} />
-                <Tooltip content={({ active, payload }) =>
-                  active && payload?.length ? (
-                    <div className="bg-gray-800 border border-gray-700 p-2 text-xs rounded">
-                      GPU: {payload[0].value}%
+                <div className="flex items-center gap-2 mb-3">
+                  <HardDrive size={18} className="text-green-400" />
+                  <h2 className="text-lg font-medium">Storage Status</h2>
+                </div>
+                <div className="space-y-3">
+                  {metrics.storage.slice(0, 3).map((storage, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>
+                          {storage.name} ({(storage.size / 1e12).toFixed(1)}TB)
+                        </span>
+                        <span>{storage.usagePercent}% used</span>
+                      </div>
+                      <Progress value={storage.usagePercent} className="h-1" />
                     </div>
-                  ) : null
-                } />
-                <Area type="monotone" dataKey="value" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={1.5} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 flex justify-between text-sm">
-            <span className="text-gray-400">Current: {metrics.gpu.usage}%</span>
-            <span className="text-gray-400">
-              VRAM: {metrics.gpu.memoryUsed ?? 'N/A'}/{metrics.gpu.memoryTotal ?? 'N/A'} GB
-            </span>
-          </div>
-        </Card>
-      )}
+                  ))}
+                </div>
+              </Card>
 
       {metrics.network.downloadSpeed !== null && metrics.network.uploadSpeed !== null && (
         <Card className="border-gray-800 bg-gray-900/50 p-4">
