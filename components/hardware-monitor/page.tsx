@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 
-import RowGPUAndNetwork from "./RowGPUAndNetwork";
-import Storage from "./Storage";
+import RowGPUAndNetwork from "./RowStorageAndNetwork";
 import Cpuandmemory from "./Cpuandmemory";
-import RowDiskAndTemp from "./RowDiskAndTemp";
 
 interface SystemMetrics {
   cpu: {
@@ -213,12 +211,7 @@ export default function HardwareMonitor() {
         gpuData={gpuData}
         networkData={networkData}
       />
-      <RowDiskAndTemp
-        metrics={metrics}
-        diskData={diskData}
-        tempData={tempData}
-      />
-      <Storage metrics={metrics} />
+      
     </TabsContent>
   );
 }

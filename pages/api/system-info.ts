@@ -1,5 +1,20 @@
+// system-info.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import si from "systeminformation";
+
+interface NetworkInterface {
+  iface: string;
+  type: string;
+  mac: string;
+  ip4: string;
+  ip6?: string;
+  speed: number;
+  dhcp: boolean;
+  rx_sec: number;
+  tx_sec: number;
+  operstate: string;
+  gateway?: string;
+}
 
 function snapToStandardRAMSize(sizeGB: number): string {
   const commonSizes = [4, 8, 16, 32, 64, 128];
@@ -27,6 +42,7 @@ export default async function handler(
       battery,
       fsSize,
       networkInterfaces,
+      networkConnections,
     ] = await Promise.all([
       si.bios(),
       si.cpu(),
@@ -40,7 +56,31 @@ export default async function handler(
       si.battery(),
       si.fsSize(),
       si.networkInterfaces(),
+      si.networkConnections(),
     ]);
+
+    // Get default gateway
+    const defaultGateway = 'N/A';
+
+    // Process network interfaces
+    const activeInterfaces = networkInterfaces
+      .filter(intf => intf.operstate === 'up' && !intf.internal)
+      .map(intf => {
+        const stats = rawNetworkStats.find(stat => stat.iface === intf.iface);
+        return {
+          iface: intf.iface,
+          type: intf.type,
+          mac: intf.mac,
+          ip4: intf.ip4,
+          ip6: intf.ip6,
+          speed: intf.speed,
+          dhcp: intf.dhcp,
+          rx_sec: stats?.rx_sec || 0,
+          tx_sec: stats?.tx_sec || 0,
+          operstate: intf.operstate,
+          gateway: undefined
+        };
+      });
 
     const memoryUsedGB = (mem.used / 1024 ** 3).toFixed(1);
     const memoryTotalGB = snapToStandardRAMSize(mem.total / 1024 ** 3);
@@ -95,8 +135,11 @@ export default async function handler(
         disk.length > 0
           ? `${(disk[0].size / 1e12).toFixed(1)}TB ${disk[0].type}`
           : null,
-      bootMode: "UEFI", // restored as per your request
+      bootMode: "UEFI", 
       graphics: gpu?.model ?? null,
+      network: activeInterfaces,
+      systemTime: new Date().toISOString(),
+      gateway: defaultGateway,
       metrics: {
         cpu: {
           usage: Math.round(currentLoad.currentLoad),

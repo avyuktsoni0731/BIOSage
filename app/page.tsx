@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { BIOS_ERRORS } from "@/lib/bios-errors";
 import { AlertCircle, Info, Loader2 } from "lucide-react";
 import HardwareMonitor from "@/components/hardware-monitor/page";
 import AdvancedFeatures from "@/components/advanced-features/page";
@@ -36,49 +37,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Performance profiles
-const performanceProfiles = {
-  quiet: {
-    name: "Quiet",
-    theme: "green",
-    fanSpeed: 25,
-    cpuMultiplier: 0.6,
-    colors: {
-      primary: "text-green-400",
-      bg: "bg-green-950/20",
-      border: "border-green-800",
-    },
-  },
-  balanced: {
-    name: "Balanced",
-    theme: "blue",
-    fanSpeed: 50,
-    cpuMultiplier: 1.0,
-    colors: {
-      primary: "text-blue-400",
-      bg: "bg-blue-950/20",
-      border: "border-blue-800",
-    },
-  },
-  turbo: {
-    name: "Turbo",
-    theme: "red",
-    fanSpeed: 85,
-    cpuMultiplier: 1.4,
-    colors: {
-      primary: "text-red-400",
-      bg: "bg-red-950/20",
-      border: "border-red-800",
-    },
-  },
-};
-
-const generateTimeData = (points: number, multiplier = 1) => {
-  return Array.from({ length: points }, (_, i) => ({
-    time: i,
-    value: Math.floor((Math.random() * 40 + 20) * multiplier),
-  }));
-};
 
 export default function BiosSimulator() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -88,8 +46,6 @@ export default function BiosSimulator() {
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [currentProfile, setCurrentProfile] =
-    useState<keyof typeof performanceProfiles>("balanced");
   const [powerMode, setPowerMode] = useState("balanced");
   const [batteryLevel, setBatteryLevel] = useState(85);
   const [isCharging, setIsCharging] = useState(false);
@@ -101,7 +57,6 @@ export default function BiosSimulator() {
   const [llmStatus, setLlmStatus] = useState<
     "idle" | "loading" | "ready" | "error"
   >("idle");
-  const profile = performanceProfiles[currentProfile];
 
   const [info, setInfo] = useState<SystemInfo | null>(null);
   useEffect(() => {
@@ -134,26 +89,7 @@ export default function BiosSimulator() {
     }
   };
 
-  // Generate CPU data based on current profile
-  const [cpuData, setCpuData] = useState(() =>
-    generateTimeData(20, performanceProfiles[currentProfile].cpuMultiplier)
-  );
 
-  // Load saved profile from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("biosProfile");
-    if (saved && saved in performanceProfiles) {
-      setCurrentProfile(saved as keyof typeof performanceProfiles);
-    }
-  }, []);
-
-  // Update CPU data when profile changes
-  useEffect(() => {
-    setCpuData(
-      generateTimeData(20, performanceProfiles[currentProfile].cpuMultiplier)
-    );
-    localStorage.setItem("biosProfile", currentProfile);
-  }, [currentProfile]);
 
   // Uptime counter
   useEffect(() => {
@@ -186,17 +122,14 @@ export default function BiosSimulator() {
 
           // Set boot stages based on progress
           if (newProgress === 25) setBootStage("Loading BIOS modules...");
-          if (newProgress === 50)
-            setBootStage("Detecting hardware components...");
-          if (newProgress === 75)
-            setBootStage("Initializing system services...");
+          if (newProgress === 50) setBootStage("Detecting hardware components...");
+          if (newProgress === 75) setBootStage("Initializing system services...");
           if (newProgress === 100) setBootStage("System ready");
 
-          // Simulate an error at 65%
-          if (newProgress === 65) {
-            setErrorMessage(
-              "ERROR: Memory module in DIMM_A2 reporting inconsistent timings."
-            );
+          // Randomly show an error between 60-80% progress
+          if (newProgress >= 60 && newProgress <= 80 && !errorMessage) {
+            const randomError = BIOS_ERRORS[Math.floor(Math.random() * BIOS_ERRORS.length)];
+            setErrorMessage(randomError.error);
           }
 
           return newProgress;
@@ -204,7 +137,7 @@ export default function BiosSimulator() {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [bootProgress]);
+  }, [bootProgress, errorMessage]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -217,16 +150,16 @@ export default function BiosSimulator() {
               prev === "dashboard"
                 ? "advanced"
                 : prev === "advanced"
-                ? "hardware"
-                : "dashboard"
+                  ? "hardware"
+                  : "dashboard"
             );
           } else {
             setActiveTab((prev) =>
               prev === "dashboard"
                 ? "hardware"
                 : prev === "hardware"
-                ? "advanced"
-                : "dashboard"
+                  ? "advanced"
+                  : "dashboard"
             );
           }
           break;
@@ -339,15 +272,15 @@ export default function BiosSimulator() {
                 llmStatus === "ready"
                   ? "bg-green-950/30 text-green-400 border-green-800"
                   : llmStatus === "loading"
-                  ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
-                  : "bg-red-950/30 text-red-400 border-red-800"
+                    ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
+                    : "bg-red-950/30 text-red-400 border-red-800"
               }
             >
               {llmStatus === "ready"
                 ? "Ready"
                 : llmStatus === "loading"
-                ? "Loading"
-                : "Unavailable"}
+                  ? "Loading"
+                  : "Unavailable"}
             </Badge>
           </div>
         </div>
@@ -470,11 +403,7 @@ export default function BiosSimulator() {
                     <div className="flex justify-between">
                       <span className="text-gray-400">Performance Profile</span>
 
-                      <Badge
-                        className={`${profile.colors.bg} ${profile.colors.primary} ${profile.colors.border}`}
-                      >
-                        {profile.name}
-                      </Badge>
+
                     </div>
                   </>
                 ) : (
@@ -565,8 +494,7 @@ export default function BiosSimulator() {
               </p>
               <p className="text-green-400">[00:00:13] Running memory tests</p>
               <p className="text-red-400">
-                [00:00:15] ERROR: Memory module in DIMM_A2 reporting
-                inconsistent timings
+                [00:00:15] {errorMessage}
               </p>
               <p className="text-yellow-400">
                 [00:00:16] WARNING: Memory running at reduced speed
@@ -580,46 +508,7 @@ export default function BiosSimulator() {
             </div>
           </Card>
 
-          <Card className="border-gray-800 bg-gray-900/50 p-4">
-            <h2 className="text-lg font-medium mb-3">Performance Profiles</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {Object.entries(performanceProfiles).map(([key, prof]) => (
-                <Card
-                  key={key}
-                  className={`p-4 cursor-pointer transition-all ${
-                    currentProfile === key
-                      ? `${prof.colors.border} ${prof.colors.bg}`
-                      : "border-gray-700 hover:border-gray-600"
-                  }`}
-                  onClick={() =>
-                    setCurrentProfile(key as keyof typeof performanceProfiles)
-                  }
-                >
-                  <div className="text-center">
-                    <h3
-                      className={`font-medium ${
-                        currentProfile === key
-                          ? prof.colors.primary
-                          : "text-white"
-                      }`}
-                    >
-                      {prof.name}
-                    </h3>
-                    <div className="mt-2 space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Fan Speed:</span>
-                        <span>{prof.fanSpeed}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">CPU Boost:</span>
-                        <span>{Math.round(prof.cpuMultiplier * 100)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </Card>
+
         </TabsContent>
 
         {/* Hardware Monitor Tab */}
