@@ -37,7 +37,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-
 export default function BiosSimulator() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [bootProgress, setBootProgress] = useState(0);
@@ -89,8 +88,6 @@ export default function BiosSimulator() {
     }
   };
 
-
-
   // Uptime counter
   useEffect(() => {
     const interval = setInterval(() => {
@@ -122,13 +119,16 @@ export default function BiosSimulator() {
 
           // Set boot stages based on progress
           if (newProgress === 25) setBootStage("Loading BIOS modules...");
-          if (newProgress === 50) setBootStage("Detecting hardware components...");
-          if (newProgress === 75) setBootStage("Initializing system services...");
+          if (newProgress === 50)
+            setBootStage("Detecting hardware components...");
+          if (newProgress === 75)
+            setBootStage("Initializing system services...");
           if (newProgress === 100) setBootStage("System ready");
 
           // Randomly show an error between 60-80% progress
           if (newProgress >= 60 && newProgress <= 80 && !errorMessage) {
-            const randomError = BIOS_ERRORS[Math.floor(Math.random() * BIOS_ERRORS.length)];
+            const randomError =
+              BIOS_ERRORS[Math.floor(Math.random() * BIOS_ERRORS.length)];
             setErrorMessage(randomError.error);
           }
 
@@ -150,16 +150,16 @@ export default function BiosSimulator() {
               prev === "dashboard"
                 ? "advanced"
                 : prev === "advanced"
-                  ? "hardware"
-                  : "dashboard"
+                ? "hardware"
+                : "dashboard"
             );
           } else {
             setActiveTab((prev) =>
               prev === "dashboard"
                 ? "hardware"
                 : prev === "hardware"
-                  ? "advanced"
-                  : "dashboard"
+                ? "advanced"
+                : "dashboard"
             );
           }
           break;
@@ -206,7 +206,7 @@ export default function BiosSimulator() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            prompt: `${errorMessage} (tell me what this error means, and how to fix it under 100 words)`,
+            prompt: `${errorMessage} (tell me what this error means, and how to fix it under 100 words, STRICTLY in hindi language)`,
             // maxTokens: 200,
             // temperature: 0.3,
             model: "llama3.2",
@@ -272,15 +272,15 @@ export default function BiosSimulator() {
                 llmStatus === "ready"
                   ? "bg-green-950/30 text-green-400 border-green-800"
                   : llmStatus === "loading"
-                    ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
-                    : "bg-red-950/30 text-red-400 border-red-800"
+                  ? "bg-yellow-950/30 text-yellow-400 border-yellow-800"
+                  : "bg-red-950/30 text-red-400 border-red-800"
               }
             >
               {llmStatus === "ready"
                 ? "Ready"
                 : llmStatus === "loading"
-                  ? "Loading"
-                  : "Unavailable"}
+                ? "Loading"
+                : "Unavailable"}
             </Badge>
           </div>
         </div>
@@ -400,11 +400,6 @@ export default function BiosSimulator() {
                     <InfoRow label="Memory" value={info.memory} />
                     <InfoRow label="Storage" value={info.storage} />
                     <InfoRow label="Boot Mode" value={info.bootMode} />
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Performance Profile</span>
-
-
-                    </div>
                   </>
                 ) : (
                   <p className="text-gray-400">Loading...</p>
@@ -493,9 +488,7 @@ export default function BiosSimulator() {
                 [00:00:09] GPU: {info?.graphics} detected
               </p>
               <p className="text-green-400">[00:00:13] Running memory tests</p>
-              <p className="text-red-400">
-                [00:00:15] {errorMessage}
-              </p>
+              <p className="text-red-400">[00:00:15] {errorMessage}</p>
               <p className="text-yellow-400">
                 [00:00:16] WARNING: Memory running at reduced speed
               </p>
@@ -507,8 +500,6 @@ export default function BiosSimulator() {
               </p>
             </div>
           </Card>
-
-
         </TabsContent>
 
         {/* Hardware Monitor Tab */}
